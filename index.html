@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ミニオセロ</title>
+  <style>
+    * { box-sizing: border-box; touch-action: manipulation; }
+    body { font-family: sans-serif; text-align: center; background: #f0f4f8; margin: 0; padding: 20px; }
+    h1 { margin: 10px 0; color: #333; }
+    .score-board { display: flex; justify-content: center; gap: 30px; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; }
+    .controls { margin-bottom: 15px; }
+    button { padding: 8px 16px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    button.active { background: #007bff; color: #fff; border-color: #007bff; }
+    .board { display: grid; gap: 4px; background: #2e7d32; padding: 8px; border-radius: 8px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .cell { background: #388e3c; aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; position: relative; }
+    .cell.valid::after { content: "⭐"; font-size: 1.2rem; opacity: 0.7; }
+    .message { margin-top: 15px; font-size: 1.1rem; font-weight: bold; color: #d32f2f; min-height: 1.5em; }
+  </style>
+</head>
+<body>
+
+  <h1>🐶 ミニオセロ 🐱</h1>
+  
+  <div class="controls">
+    <button id="btn4" class="active" onclick="setSize(4)">4x4 (はやい)</button>
+    <button id="btn6" onclick="setSize(6)">6x6 (じっくり)</button>
+    <button onclick="resetGame()">やりなおす</button>
+  </div>
+
+  <div class="score-board">
+    <div>🐶 🐶: <span id="score1">2</span></div>
+    <div>🐱 🐱: <span id="score2">2</span></div>
+  </div>
+
+  <div id="board" class="board"></div>
+  <div id="message" class="message"></div>
+
+  <script>
+    let size = 4;
+    let board = [];
+    let turn = 1; // 1: 🐶(黒), -1: 🐱(白)
+    const icons = { 1: "🐶", "-1": "🐱" };
+
+    function setSize(s) {
+      size = s;
+      document.getElementById('btn4').classList.toggle('active', s === 4);
+      document.getElementById('btn6').classList.toggle('active', s === 6);
+      resetGame();
+    }
+
+    function resetGame() {
+      board = Array(size).fill(0).map(() => Array(size).fill(0));
+      const mid = size / 2;
+      board[mid-1][mid-1] = -1;
+      board[mid][mid] = -1;
+      board[mid-1][mid] = 1;
+      board[mid][mid-1] = 1;
+      turn = 1;
+      document.getElementById('message').innerText = "";
+      render();
+    }
+
+    function getFlippable(r, c, player) {
+      if (board[r][c] !== 0) return [];
+      const dirs = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+      let toFlip = [];
+      for (let [dr, dc] of dirs) {
+        let nr = r + dr, nc = c + dc, temp = [];
+        while (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === -player) {
+          temp.push([nr, nc]);
+          nr += dr; nc += dc;
+        }
+        if (nr >= 0 && nr < size && nc >= 0 && nc < size && board[nr][nc] === player) {
+          toFlip = toFlip.concat(temp);
+        }
+      }
+      return toFlip;
+    }
+
+    function getValidMoves(player) {
+      let moves = {};
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          let flips = getFlippable(r, c, player);
+          if (flips.length > 0) moves[`${r},${c}`] = flips;
+        }
+      }
+      return moves;
+    }
+
+    function makeMove(r, c) {
+      const validMoves = getValidMoves(turn);
+      const key = `${r},${c}`;
+      if (!validMoves[key]) return;
+
+      board[r][c] = turn;
+      for (let [fr, fc] of validMoves[key]) {
+        board[fr][fc] = turn;
+      }
+
+      turn = -turn;
+      checkPass();
+      render();
+    }
+
+    function checkPass() {
+      let currentValid = getValidMoves(turn);
+      if (Object.keys(currentValid).length === 0) {
+        let nextValid = getValidMoves(-turn);
+        if (Object.keys(nextValid).length === 0) {
+          endGame();
+          return;
+        }
+        document.getElementById('message').innerText = `${icons[turn]} は置ける場所がないのでパス！`;
+        turn = -turn;
+      } else {
+        document.getElementById('message').innerText = "";
+      }
+    }
+
+    function endGame() {
+      let p1 = 0, p2 = 0;
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (board[r][c] === 1) p1++;
+          if (board[r][c] === -1) p2++;
+        }
+      }
+      let winner = p1 > p2 ? "🐶 🐶の勝ち！" : p2 > p1 ? "🐱 🐱の勝ち！" : "引き分け！";
+      document.getElementById('message').innerText = `ゲーム終了！ ${winner}`;
+    }
+
+    function render() {
+      const boardEl = document.getElementById('board');
+      boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+      boardEl.innerHTML = '';
+
+      const validMoves = getValidMoves(turn);
+      let p1 = 0, p2 = 0;
+
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const val = board[r][c];
+          if (val === 1) p1++;
+          if (val === -1) p2++;
+
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          if (val === 0 && validMoves[`${r},${c}`]) {
+            cell.classList.add('valid');
+          }
+          cell.innerText = val !== 0 ? icons[val] : '';
+          cell.onclick = () => makeMove(r, c);
+          boardEl.appendChild(cell);
+        }
+      }
+
+      document.getElementById('score1').innerText = p1;
+      document.getElementById('score2').innerText = p2;
+    }
+
+    resetGame();
+  </script>
+</body>
+</html>
+
