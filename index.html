@@ -7,14 +7,29 @@
   <style>
     * { box-sizing: border-box; touch-action: manipulation; }
     body { font-family: sans-serif; text-align: center; background: #f0f4f8; margin: 0; padding: 20px; }
-    h1 { margin: 10px 0; color: #333; }
+    h1 { margin: 5px 0 15px 0; color: #333; font-size: 1.5rem; }
+    
+    /* 手番表示エリア */
+    .turn-indicator {
+      font-size: 1.3rem;
+      font-weight: bold;
+      background: #ffffff;
+      padding: 10px 20px;
+      border-radius: 30px;
+      display: inline-block;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 3px solid #ff9800;
+      color: #333;
+    }
+
     .score-board { display: flex; justify-content: center; gap: 30px; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; }
     .controls { margin-bottom: 15px; }
-    button { padding: 8px 16px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    button { padding: 8px 16px; font-size: 0.9rem; border-radius: 8px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
     button.active { background: #007bff; color: #fff; border-color: #007bff; }
     .board { display: grid; gap: 4px; background: #2e7d32; padding: 8px; border-radius: 8px; max-width: 360px; margin: 0 auto; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     .cell { background: #388e3c; aspect-ratio: 1; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 2rem; cursor: pointer; position: relative; }
-    .cell.valid::after { content: "⭐"; font-size: 1.2rem; opacity: 0.7; }
+    .cell.valid::after { content: "⭐"; font-size: 1.2rem; opacity: 0.8; }
     .message { margin-top: 15px; font-size: 1.1rem; font-weight: bold; color: #d32f2f; min-height: 1.5em; }
   </style>
 </head>
@@ -22,6 +37,9 @@
 
   <h1>🐶 ミニオセロ 🐱</h1>
   
+  <!-- 今どちらの番か大きく表示 -->
+  <div id="turn-indicator" class="turn-indicator">🐶 🐶 のばん</div>
+
   <div class="controls">
     <button id="btn4" class="active" onclick="setSize(4)">4x4 (はやい)</button>
     <button id="btn6" onclick="setSize(6)">6x6 (じっくり)</button>
@@ -40,7 +58,7 @@
     let size = 4;
     let board = [];
     let turn = 1; // 1: 🐶(黒), -1: 🐱(白)
-    const icons = { 1: "🐶", "-1": "🐱" };
+    const icons = { 1: "🐶 🐶", "-1": "🐱 🐱" };
 
     function setSize(s) {
       size = s;
@@ -58,7 +76,13 @@
       board[mid][mid-1] = 1;
       turn = 1;
       document.getElementById('message').innerText = "";
+      updateTurnDisplay();
       render();
+    }
+
+    function updateTurnDisplay() {
+      const indicator = document.getElementById('turn-indicator');
+      indicator.innerText = `いまは ${icons[turn]} のばん！`;
     }
 
     function getFlippable(r, c, player) {
@@ -101,6 +125,7 @@
 
       turn = -turn;
       checkPass();
+      updateTurnDisplay();
       render();
     }
 
@@ -128,7 +153,8 @@
         }
       }
       let winner = p1 > p2 ? "🐶 🐶の勝ち！" : p2 > p1 ? "🐱 🐱の勝ち！" : "引き分け！";
-      document.getElementById('message').innerText = `ゲーム終了！ ${winner}`;
+      document.getElementById('turn-indicator').innerText = "ゲーム終了！";
+      document.getElementById('message').innerText = `けっか: ${winner}`;
     }
 
     function render() {
@@ -150,7 +176,7 @@
           if (val === 0 && validMoves[`${r},${c}`]) {
             cell.classList.add('valid');
           }
-          cell.innerText = val !== 0 ? icons[val] : '';
+          cell.innerText = val !== 0 ? (val === 1 ? "🐶" : "🐱") : '';
           cell.onclick = () => makeMove(r, c);
           boardEl.appendChild(cell);
         }
@@ -164,4 +190,3 @@
   </script>
 </body>
 </html>
-
